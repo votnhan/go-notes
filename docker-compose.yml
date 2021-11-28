@@ -1,0 +1,34 @@
+version: "3.9"
+services:
+  web:
+    env_file:
+      - env/note_crud
+    build: .
+    ports:
+      - "8088:8088"
+    depends_on:
+      - "rabbitmq"
+    command: ["./wait-for.sh", "rabbitmq:5672", "--", "./main"]
+    container_name: note-crud
+    image: note-crud
+    volumes:
+      - dbsqlite:/data
+
+  consumer:
+    env_file:
+      - env/note_crud
+    build: .
+    depends_on:
+      - "web"
+    command: ["./wait-for.sh", "rabbitmq:5672", "--", "./consumer"]
+    container_name: consumer
+    image: note-crud
+    volumes:
+      - dbsqlite:/data
+
+  rabbitmq:
+    image: "rabbitmq"
+    container_name: "rabbitmq"
+
+volumes:
+  dbsqlite:

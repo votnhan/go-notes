@@ -1,0 +1,5 @@
+DB_FILE_LOG=/data/log_track.db
+RABBIT_MQ_USER=guest
+RABBIT_MQ_PASSWORD=guest
+RABBIT_MQ_HOST=rabbitmq
+QUEUE_NAME=log_note
