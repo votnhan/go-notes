@@ -39,6 +39,10 @@ type IndentifyURIPayload struct {
 	NoteId int `binding:"required" uri:"noteid"`
 }
 
+type DeleteNotePayload struct {
+	NoteIds []int `binding:"required,min=1" json:"note_ids"`
+}
+
 type ReadAllNotePayload struct {
 	Offset int `binding:"gte=0" json:"offset" form:"offset"`
 	Limit  int `binding:"gte=0" json:"limit" form:"limit"`
@@ -71,10 +75,15 @@ func (n *SQLiteNote) GetNote(noteId int) (note Note, err error) {
 	return
 }
 
-func (n *SQLiteNote) GetNoteMany(payload ReadAllNotePayload) (notes []Note, err error) {
+func (n *SQLiteNote) GetNoteMany(payload ReadAllNotePayload) (notes []Note, nRows int64, err error) {
+	err = n.db.Model(&Note{}).Count(&nRows).Error
+	if err != nil {
+		log.Printf("[GetNoteMany] - get number of rows error: %v", err)
+		return
+	}
 	err = n.db.Limit(payload.Limit).Offset(payload.Offset).Order("id desc").Find(&notes).Error
 	if err != nil {
-		log.Printf("[GetNoteMany] - error: %v", err)
+		log.Printf("[GetNoteMany] - get notes error: %v", err)
 		return
 	}
 	return
@@ -100,14 +109,12 @@ func (n *SQLiteNote) UpdateNote(payload UpdateNotePayload, noteId int) (note Not
 	return
 }
 
-func (n *SQLiteNote) DeleteNote(noteId int) (err error) {
-	deleteResult := n.db.Delete(&Note{}, noteId)
+func (n *SQLiteNote) DeleteNote(payload DeleteNotePayload) (rowsAffected int, err error) {
+	deleteResult := n.db.Delete(&Note{}, payload.NoteIds)
 	if deleteResult.Error != nil {
 		log.Printf("[DeleteNote] - error: %v", err)
-		return deleteResult.Error
+		return 0, deleteResult.Error
 	}
-	if deleteResult.RowsAffected == 0 {
-		return gorm.ErrRecordNotFound
-	}
+	rowsAffected = int(deleteResult.RowsAffected)
 	return
 }

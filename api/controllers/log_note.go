@@ -25,12 +25,17 @@ func (lc *LogNoteCtrl) FetchLogNotes(c *gin.Context) {
 		ResponseJSON(c, NewRestResponse(INVALID_PARAMETERS, nil, errMap), nil)
 		return
 	}
-	logNotes, err := lc.LogNoteModel.GetLastLogs(payload)
+	logNotes, nRows, err := lc.LogNoteModel.GetLastLogs(payload)
 	if err != nil {
 		ResponseJSON(c, NewRestResponse(UNKNOWN_ERROR, nil, err.Error()), nil)
 		return
 	}
-	ResponseJSON(c, NewRestResponse(SUCCESS, logNotes, nil), nil)
+	response := map[string]interface{}{
+		"all":   nRows,
+		"fetch": len(logNotes),
+		"data":  logNotes,
+	}
+	ResponseJSON(c, NewRestResponse(SUCCESS, response, nil), nil)
 }
 
 func (lc *LogNoteCtrl) DeleteLogNotes(c *gin.Context) {
@@ -40,10 +45,13 @@ func (lc *LogNoteCtrl) DeleteLogNotes(c *gin.Context) {
 		ResponseJSON(c, NewRestResponse(INVALID_PARAMETERS, nil, errMap), nil)
 		return
 	}
-	err := lc.LogNoteModel.DeleteFirstLogs(payload)
+	rowsAffected, err := lc.LogNoteModel.DeleteFirstLogs(payload)
 	if err != nil {
 		ResponseJSON(c, NewRestResponse(UNKNOWN_ERROR, nil, err.Error()), nil)
 		return
 	}
-	ResponseJSON(c, NewRestResponse(SUCCESS, "success", nil), nil)
+	response := map[string]interface{}{
+		"rows_affected": rowsAffected,
+	}
+	ResponseJSON(c, NewRestResponse(SUCCESS, response, nil), nil)
 }

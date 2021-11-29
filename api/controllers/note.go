@@ -18,7 +18,7 @@ type NoteCtrl struct {
 	validate  *validator.Validate
 }
 
-func CreateNoteCtrl(noteModel *models.SQLiteNote, publisher *tracking.Publisher, validate *validator.Validate) *NoteCtrl {
+func NewNoteCtrl(noteModel *models.SQLiteNote, publisher *tracking.Publisher, validate *validator.Validate) *NoteCtrl {
 	return &NoteCtrl{
 		noteModel: noteModel,
 		publisher: publisher,
@@ -86,13 +86,18 @@ func (nc *NoteCtrl) ReadNoteAll(c *gin.Context) {
 		ResponseJSON(c, NewRestResponse(INVALID_PARAMETERS, nil, errMap), nil)
 		return
 	}
-	notes, err := nc.noteModel.GetNoteMany(payload)
+	notes, nRows, err := nc.noteModel.GetNoteMany(payload)
 	if err != nil {
 		ResponseJSON(c, NewRestResponse(UNKNOWN_ERROR, nil, err.Error()), nil)
 		return
 	}
+	response := map[string]interface{}{
+		"all":   nRows,
+		"fetch": len(notes),
+		"data":  notes,
+	}
 	go PushMessageTracking(nc.publisher, READ, nc.validate)
-	ResponseJSON(c, NewRestResponse(SUCCESS, notes, nil), nil)
+	ResponseJSON(c, NewRestResponse(SUCCESS, response, nil), nil)
 }
 
 func (nc *NoteCtrl) UpdateNote(c *gin.Context) {
@@ -122,13 +127,13 @@ func (nc *NoteCtrl) UpdateNote(c *gin.Context) {
 }
 
 func (nc *NoteCtrl) DeleteNote(c *gin.Context) {
-	uri_payload := models.IndentifyURIPayload{}
-	if err := c.ShouldBindUri(&uri_payload); err != nil {
+	payload := models.DeleteNotePayload{}
+	if err := c.ShouldBind(&payload); err != nil {
 		errMap := getInvalidParameterResponse(err)
 		ResponseJSON(c, NewRestResponse(INVALID_PARAMETERS, nil, errMap), nil)
 		return
 	}
-	err := nc.noteModel.DeleteNote(uri_payload.NoteId)
+	rowsAffected, err := nc.noteModel.DeleteNote(payload)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ResponseJSON(c, NewRestResponse(INVALID_PARAMETERS, nil, err.Error()), nil)
@@ -137,6 +142,9 @@ func (nc *NoteCtrl) DeleteNote(c *gin.Context) {
 		ResponseJSON(c, NewRestResponse(UNKNOWN_ERROR, nil, err.Error()), nil)
 		return
 	}
+	response := map[string]interface{}{
+		"rows_affected": rowsAffected,
+	}
 	go PushMessageTracking(nc.publisher, DELETE, nc.validate)
-	ResponseJSON(c, NewRestResponse(SUCCESS, "success", nil), nil)
+	ResponseJSON(c, NewRestResponse(SUCCESS, response, nil), nil)
 }

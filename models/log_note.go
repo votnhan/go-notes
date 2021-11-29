@@ -22,10 +22,6 @@ type LogNote struct {
 	CreatedAt string `gorm:"not null" json:"created_at"`
 }
 
-type FilteredIdLogNote struct {
-	Id int `gorm:"primaryKey;autoIncrement" json:"id"`
-}
-
 type FetchLogsPayload struct {
 	Limit int `binding:"gte=0" json:"limit" form:"limit"`
 }
@@ -52,26 +48,32 @@ func (n *SQLiteLogNote) CreateLogNote(logNoteInput LogNote) (logNote LogNote, er
 	return
 }
 
-func (n *SQLiteLogNote) GetLastLogs(payload FetchLogsPayload) (logNotes []LogNote, err error) {
+func (n *SQLiteLogNote) GetLastLogs(payload FetchLogsPayload) (logNotes []LogNote, nRows int64, err error) {
+	err = n.db.Model(&LogNote{}).Count(&nRows).Error
+	if err != nil {
+		log.Printf("[GetLastLogs] - get number of rows error: %v", err)
+		return
+	}
 	err = n.db.Limit(payload.Limit).Order("id desc").Find(&logNotes).Error
 	if err != nil {
-		log.Printf("[GetLastLogs] - error: %v", err)
+		log.Printf("[GetLastLogs] - get note logs error: %v", err)
 		return
 	}
 	return
 }
 
-func (n *SQLiteLogNote) DeleteFirstLogs(payload RemoveLogsPayload) (err error) {
-	var logIds []FilteredIdLogNote
-	err = n.db.Model(&LogNote{}).Limit(payload.NumberRows).Find(&logIds).Error
+func (n *SQLiteLogNote) DeleteFirstLogs(payload RemoveLogsPayload) (rowsAffected int, err error) {
+	var logIds []int
+	err = n.db.Model(&LogNote{}).Select("Id").Limit(payload.NumberRows).Find(&logIds).Error
 	if err != nil {
-		log.Printf("[DeleteFirstLogs] - fetch id error: %v", err)
+		log.Printf("[DeleteFirstLogs] - fetch ids error: %v", err)
 		return
 	}
-	err = n.db.Model(&LogNote{}).Delete(&logIds).Error
-	if err != nil {
+	result := n.db.Where("Id in ?", logIds).Delete(&LogNote{})
+	if result.Error != nil {
 		log.Printf("[DeleteFirstLogs] - delete by ids error: %v", err)
 		return
 	}
+	rowsAffected = int(result.RowsAffected)
 	return
 }

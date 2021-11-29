@@ -28,7 +28,7 @@ func CreateRouter(noteCtrl *controllers.NoteCtrl, logNoteCtrl *controllers.LogNo
 	// for CRUD notes
 	v1.GET("/note/:noteid", noteCtrl.ReadNote)
 	v1.PUT("/note/:noteid", noteCtrl.UpdateNote)
-	v1.DELETE("/note/:noteid", noteCtrl.DeleteNote)
+	v1.DELETE("/note", noteCtrl.DeleteNote)
 	v1.POST("/note", noteCtrl.CreateNote)
 	v1.GET("/note", noteCtrl.ReadNoteAll)
 	// for tracking logs

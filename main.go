@@ -34,7 +34,7 @@ func main() {
 	validate := validator.New(&validator.Config{TagName: "validate"})
 
 	// Build controllers
-	noteCtrl := controllers.CreateNoteCtrl(noteModel, publisher, validate)
+	noteCtrl := controllers.NewNoteCtrl(noteModel, publisher, validate)
 	logNoteCtrl := controllers.CreateLogNoteCtrl(logNoteModel)
 
 	// Build routers
